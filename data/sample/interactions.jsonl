@@ -1,0 +1,13 @@
+{"user_id":"u001","item_id":"p001","event":"click","timestamp":"2026-01-01T10:00:00Z"}
+{"user_id":"u001","item_id":"p002","event":"purchase","timestamp":"2026-01-02T10:00:00Z"}
+{"user_id":"u001","item_id":"p004","event":"cart","timestamp":"2026-01-03T10:00:00Z"}
+{"user_id":"u002","item_id":"p004","event":"purchase","timestamp":"2026-01-01T11:00:00Z"}
+{"user_id":"u002","item_id":"p005","event":"click","timestamp":"2026-01-02T11:00:00Z"}
+{"user_id":"u002","item_id":"p006","event":"cart","timestamp":"2026-01-03T11:00:00Z"}
+{"user_id":"u003","item_id":"p008","event":"purchase","timestamp":"2026-01-01T12:00:00Z"}
+{"user_id":"u003","item_id":"p009","event":"click","timestamp":"2026-01-02T12:00:00Z"}
+{"user_id":"u003","item_id":"p010","event":"purchase","timestamp":"2026-01-03T12:00:00Z"}
+{"user_id":"u004","item_id":"p001","event":"purchase","timestamp":"2026-01-04T10:00:00Z"}
+{"user_id":"u004","item_id":"p004","event":"click","timestamp":"2026-01-04T11:00:00Z"}
+{"user_id":"u004","item_id":"p006","event":"purchase","timestamp":"2026-01-04T12:00:00Z"}
+

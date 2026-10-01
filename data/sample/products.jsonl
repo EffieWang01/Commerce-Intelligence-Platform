@@ -1,0 +1,11 @@
+{"item_id":"p001","title":"静界 Pro 主动降噪耳机","category":"耳机","description":"头戴式蓝牙耳机，主动降噪，长续航，适合通勤","price":499,"sponsored":false,"ctr_prior":0.08,"cvr_prior":0.04}
+{"item_id":"p002","title":"轻听 Air 无线耳机","category":"耳机","description":"入耳式轻量蓝牙耳机，通话降噪，运动防水","price":299,"sponsored":true,"ctr_prior":0.12,"cvr_prior":0.05}
+{"item_id":"p003","title":"Studio Max 监听耳机","category":"耳机","description":"高解析有线监听耳机，录音与音乐制作","price":899,"sponsored":false,"ctr_prior":0.04,"cvr_prior":0.02}
+{"item_id":"p004","title":"疾风 K87 机械键盘","category":"键盘","description":"87键热插拔机械键盘，低延迟，RGB背光","price":399,"sponsored":false,"ctr_prior":0.07,"cvr_prior":0.04}
+{"item_id":"p005","title":"办公静音键盘","category":"键盘","description":"无线双模静音键盘，适合办公室和长时间输入","price":199,"sponsored":true,"ctr_prior":0.09,"cvr_prior":0.06}
+{"item_id":"p006","title":"Vision 27 4K 显示器","category":"显示器","description":"27英寸4K IPS显示器，广色域，支持升降旋转","price":1899,"sponsored":false,"ctr_prior":0.05,"cvr_prior":0.02}
+{"item_id":"p007","title":"极速 24 电竞显示器","category":"显示器","description":"24英寸高刷新率电竞显示器，低延迟","price":1099,"sponsored":true,"ctr_prior":0.08,"cvr_prior":0.025}
+{"item_id":"p008","title":"手冲咖啡入门套装","category":"咖啡","description":"滤杯手冲壶磨豆机组合，适合咖啡新手","price":329,"sponsored":false,"ctr_prior":0.06,"cvr_prior":0.04}
+{"item_id":"p009","title":"轻量缓震跑鞋","category":"运动","description":"透气轻量跑鞋，缓震中底，适合日常慢跑","price":459,"sponsored":false,"ctr_prior":0.09,"cvr_prior":0.05}
+{"item_id":"p010","title":"户外防风运动外套","category":"运动","description":"轻薄防风防泼水外套，适合跑步与徒步","price":369,"sponsored":true,"ctr_prior":0.11,"cvr_prior":0.045}
+

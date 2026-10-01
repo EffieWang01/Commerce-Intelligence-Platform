@@ -1,0 +1,26 @@
+services:
+  api:
+    build: .
+    environment:
+      COMMERCE_PROFILE: local
+      COMMERCE_DATA_DIR: /app/data/sample
+    ports:
+      - "8008:8008"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8008/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+  demo:
+    build: .
+    command: ["streamlit", "run", "app.py", "--server.address", "0.0.0.0", "--server.port", "8503"]
+    environment:
+      COMMERCE_API_URL: http://api:8008
+    volumes:
+      - ./app.py:/app/app.py:ro
+    ports:
+      - "8503:8503"
+    depends_on:
+      api:
+        condition: service_healthy
+

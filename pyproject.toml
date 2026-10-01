@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "commerce-searchrec-agent"
+version = "0.1.0"
+description = "A resource-aware search, recommendation, ads, LLM and agent portfolio project"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115,<1",
+  "uvicorn>=0.30,<1",
+  "pydantic>=2.8,<3",
+  "numpy>=1.26,<3",
+  "pandas>=2.2,<3",
+  "streamlit>=1.39,<2",
+  "requests>=2.32,<3",
+]
+
+[project.optional-dependencies]
+server = [
+  "torch>=2.4,<3",
+  "transformers>=4.46,<5",
+  "sentence-transformers>=3.2,<4",
+  "faiss-cpu>=1.9,<2",
+  "lightgbm>=4.5,<5",
+  "datasets>=3,<5",
+  "peft>=0.13,<1",
+  "accelerate>=1,<2",
+  "mlflow>=2.17,<4",
+]
+test = ["pytest>=8,<10", "httpx>=0.27,<1"]
+
+[project.scripts]
+commerce-ai = "commerce_ai.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
