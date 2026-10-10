@@ -1,0 +1,36 @@
+{
+  "generated_at": "2026-10-10T05:14:37.582754+00:00",
+  "source": "Amazon Reviews 2023 (McAuley Lab)",
+  "source_url": "https://amazon-reviews-2023.github.io/main.html",
+  "products": 50000,
+  "source_categories": [
+    "All_Beauty",
+    "Automotive",
+    "Clothing_Shoes_and_Jewelry",
+    "Electronics",
+    "Home_and_Kitchen",
+    "Office_Products",
+    "Sports_and_Outdoors",
+    "Tools_and_Home_Improvement"
+  ],
+  "categories": {
+    "美妆个护": 6250,
+    "汽车用品": 6250,
+    "服装鞋包": 6250,
+    "电子数码": 6250,
+    "家居厨具": 6250,
+    "办公文具": 6250,
+    "运动户外": 6250,
+    "工具五金": 6250
+  },
+  "source_currency": "USD",
+  "complete_products": 50000,
+  "missing_by_field": {
+    "title": 0,
+    "category": 0,
+    "attributes": 0,
+    "price": 0,
+    "description": 0,
+    "image_url": 0
+  }
+}

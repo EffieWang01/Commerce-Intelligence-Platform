@@ -19,10 +19,26 @@ class Settings:
     top_k: int
     candidate_k: int
     max_agent_steps: int
+    llm_base_url: str = ""
+    llm_api_key: str = ""
+    reranker_backend: str = "weighted"
+    vector_backend: str = "memory"
+    qdrant_url: str = "http://127.0.0.1:6333"
+    qdrant_api_key: str = ""
+    qdrant_collection: str = "commerce_products"
+    qdrant_image_collection: str = "commerce_product_images"
+    recommendation_backend: str = "itemcf"
+    gorse_url: str = "http://127.0.0.1:8088"
+    gorse_api_key: str = ""
+    multimodal_backend: str = "disabled"
+    multimodal_model: str = "ViT-B-16"
+    sync_external: bool = False
 
     @classmethod
     def from_env(cls) -> "Settings":
         profile = os.getenv("COMMERCE_PROFILE", "local")
+        demo_dir = ROOT / "data" / "demo"
+        default_data_dir = demo_dir if demo_dir.is_dir() else ROOT / "data" / "sample"
         defaults = {
             "local": dict(
                 llm_backend="heuristic", embedding_backend="hash",
@@ -30,8 +46,8 @@ class Settings:
                 reranker_model="weighted-local", candidate_k=30,
             ),
             "server": dict(
-                llm_backend="transformers", embedding_backend="sentence-transformers",
-                llm_model="Qwen/Qwen3-4B", embedding_model="BAAI/bge-m3",
+                llm_backend="openai-compatible", embedding_backend="sentence-transformers",
+                llm_model="qwen-vl-plus", embedding_model="BAAI/bge-m3",
                 reranker_model="BAAI/bge-reranker-v2-m3", candidate_k=100,
             ),
         }
@@ -40,7 +56,7 @@ class Settings:
         values = defaults[profile]
         return cls(
             profile=profile,
-            data_dir=Path(os.getenv("COMMERCE_DATA_DIR", ROOT / "data" / "sample")),
+            data_dir=Path(os.getenv("COMMERCE_DATA_DIR", default_data_dir)),
             artifacts_dir=Path(os.getenv("COMMERCE_ARTIFACTS_DIR", ROOT / "artifacts")),
             llm_backend=os.getenv("COMMERCE_LLM_BACKEND", values["llm_backend"]),
             embedding_backend=os.getenv("COMMERCE_EMBEDDING_BACKEND", values["embedding_backend"]),
@@ -50,5 +66,19 @@ class Settings:
             top_k=int(os.getenv("COMMERCE_TOP_K", "10")),
             candidate_k=int(os.getenv("COMMERCE_CANDIDATE_K", str(values["candidate_k"]))),
             max_agent_steps=int(os.getenv("COMMERCE_MAX_AGENT_STEPS", "4")),
+            llm_base_url=os.getenv("COMMERCE_LLM_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
+            llm_api_key=os.getenv("COMMERCE_LLM_API_KEY", ""),
+            reranker_backend=os.getenv("COMMERCE_RERANKER_BACKEND", "cross-encoder" if profile == "server" else "weighted"),
+            vector_backend=os.getenv("COMMERCE_VECTOR_BACKEND", "qdrant" if profile == "server" else "memory"),
+            qdrant_url=os.getenv("COMMERCE_QDRANT_URL", "http://127.0.0.1:6333"),
+            qdrant_api_key=os.getenv("COMMERCE_QDRANT_API_KEY", ""),
+            qdrant_collection=os.getenv("COMMERCE_QDRANT_COLLECTION", "commerce_products"),
+            qdrant_image_collection=os.getenv("COMMERCE_QDRANT_IMAGE_COLLECTION", "commerce_product_images"),
+            recommendation_backend=os.getenv("COMMERCE_RECOMMENDATION_BACKEND", "gorse" if profile == "server" else "itemcf"),
+            gorse_url=os.getenv("COMMERCE_GORSE_URL", "http://127.0.0.1:8088"),
+            gorse_api_key=os.getenv("COMMERCE_GORSE_API_KEY", ""),
+            multimodal_backend=os.getenv("COMMERCE_MULTIMODAL_BACKEND", "disabled"),
+            multimodal_model=os.getenv("COMMERCE_MULTIMODAL_MODEL", "ViT-B-16"),
+            sync_external=os.getenv("COMMERCE_SYNC_EXTERNAL", "false").lower() in {"1", "true", "yes"},
         )
 

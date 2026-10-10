@@ -12,7 +12,12 @@ def read_jsonl(path: Path) -> list[dict]:
 
 class CommerceData:
     def __init__(self, data_dir: Path):
-        self.products = [Product.model_validate(row) for row in read_jsonl(data_dir / "products.jsonl")]
+        rows = read_jsonl(data_dir / "products.jsonl")
+        for row in rows:
+            image_url = row.get("image_url")
+            if image_url and not image_url.startswith(("http://", "https://", "data:")):
+                row["image_url"] = str((data_dir / image_url).resolve())
+        self.products = [Product.model_validate(row) for row in rows]
         self.interactions = [Interaction.model_validate(row) for row in read_jsonl(data_dir / "interactions.jsonl")]
         self.products_by_id = {product.item_id: product for product in self.products}
         self.user_history: dict[str, list[str]] = defaultdict(list)

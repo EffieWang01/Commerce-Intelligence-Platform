@@ -18,14 +18,14 @@ def service() -> CommerceService:
 
 @app.get("/health")
 def health():
-    settings = Settings.from_env()
-    return {"status": "ok", "profile": settings.profile, "llm": settings.llm_model,
-            "embedding": settings.embedding_model}
+    return service().health()
 
 
 @app.post("/v1/search")
 def search(request: SearchRequest):
-    return service().search(request.query, request.user_id, request.top_k, request.include_ads)
+    return service().search(
+        request.query, request.user_id, request.top_k, request.include_ads, request.image_data
+    )
 
 
 @app.post("/v1/recommend")
@@ -35,5 +35,5 @@ def recommend(request: RecommendRequest):
 
 @app.post("/v1/agent")
 def agent(request: AgentRequest):
-    return CommerceAgent(service()).run(request.message, request.user_id)
+    return CommerceAgent(service()).run(request.message, request.user_id, request.image_data)
 

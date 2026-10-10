@@ -23,6 +23,24 @@ def test_search_is_grounded_and_respects_price():
     assert all(item.reason for item in result.items)
 
 
+def test_queries_are_distinct_and_irrelevant_query_is_empty():
+    service = CommerceService(settings())
+    headphones = service.search("降噪耳机", top_k=5)
+    keyboards = service.search("机械键盘", top_k=5)
+    irrelevant = service.search("完全不存在的商品", user_id="u001", top_k=5)
+    assert headphones.items[0].category == "耳机"
+    assert keyboards.items[0].category == "键盘"
+    assert not irrelevant.items
+
+
+def test_hash_retrieval_does_not_return_collision_only_matches():
+    service = CommerceService(settings())
+    result = service.search("完全不存在的商品xyz987", top_k=5)
+    assert not result.items
+    english_result = service.search("xyz987-unseen-catalog-query", top_k=5)
+    assert not english_result.items
+
+
 def test_recommendation_and_agent_tools():
     service = CommerceService(settings())
     recommendation = service.recommend("u001", top_k=3)
@@ -44,6 +62,8 @@ def test_offline_evaluation_contract():
     assert report.queries == 4
     assert 0 <= report.ndcg_at_10 <= 1
     assert report.recall_at_10 > 0
+    assert report.mrr_at_10 > 0
+    assert report.p95_latency_ms >= 0
     assert ndcg_at_k(["a", "b"], {"a"}, 2) == 1
     assert recall_at_k(["a", "b"], {"a", "c"}, 2) == .5
 

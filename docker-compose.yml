@@ -1,9 +1,20 @@
 services:
   api:
-    build: .
+    build:
+      context: .
+      args:
+        INSTALL_EXTRAS: ${COMMERCE_INSTALL_EXTRAS:-}
     environment:
-      COMMERCE_PROFILE: local
+      COMMERCE_PROFILE: ${COMMERCE_PROFILE:-local}
       COMMERCE_DATA_DIR: /app/data/sample
+      COMMERCE_LLM_BACKEND: ${COMMERCE_LLM_BACKEND:-heuristic}
+      COMMERCE_LLM_MODEL: ${COMMERCE_LLM_MODEL:-heuristic-local}
+      COMMERCE_LLM_BASE_URL: ${COMMERCE_LLM_BASE_URL:-http://host.docker.internal:8000/v1}
+      COMMERCE_LLM_API_KEY: ${COMMERCE_LLM_API_KEY:-}
+      COMMERCE_VECTOR_BACKEND: ${COMMERCE_VECTOR_BACKEND:-memory}
+      COMMERCE_QDRANT_URL: http://qdrant:6333
+      COMMERCE_RECOMMENDATION_BACKEND: ${COMMERCE_RECOMMENDATION_BACKEND:-itemcf}
+      COMMERCE_GORSE_URL: http://gorse:8088
     ports:
       - "8008:8008"
     healthcheck:
@@ -23,4 +34,25 @@ services:
     depends_on:
       api:
         condition: service_healthy
+
+  qdrant:
+    image: ${QDRANT_IMAGE:-qdrant/qdrant:v1.19.1}
+    profiles: ["full"]
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+  gorse:
+    image: ${GORSE_IMAGE:-zhenghaoz/gorse-in-one:latest}
+    command: ["--playground"]
+    profiles: ["full"]
+    ports:
+      - "8088:8088"
+    volumes:
+      - gorse_data:/var/lib/gorse
+
+volumes:
+  qdrant_data:
+  gorse_data:
 

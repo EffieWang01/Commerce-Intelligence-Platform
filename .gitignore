@@ -8,3 +8,9 @@ data/raw/
 *.db
 .env
 
+.cache/
+data/.cache/
+
+# 演示商品目录由 scripts/import_amazon_reviews_2023.py 重建，大文件不入库
+# 保留 manifest.json 与 ATTRIBUTION.md 作为数据来源记录
+data/demo/*.jsonl
