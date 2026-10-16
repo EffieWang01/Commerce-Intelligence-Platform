@@ -4,6 +4,7 @@ from .config import Settings
 from .data import CommerceData
 from .llm import HeuristicLLM, OpenAICompatibleLLM, ResilientLLM, TransformersLLM
 from .multimodal import ChineseClipMultimodalRetriever, DisabledMultimodalRetriever
+from .product_matching import TARGET_LABELS, matches_product_target, query_product_target
 from .ranking import Candidate, MultiObjectiveRanker, load_ranking_model
 from .recommendation import GorseRecommender, ItemCF
 from .reranking import CrossEncoderReranker, NoopReranker
@@ -140,7 +141,7 @@ class CommerceService:
 
     def search(self, query: str, user_id: str | None = None, top_k: int = 10,
                include_ads: bool = True, image_data: str | None = None,
-               parsed_intent: dict | None = None) -> ResultSet:
+               parsed_intent: dict | None = None, match_product_type: bool = True) -> ResultSet:
         started = perf_counter()
         vision_text = self.llm.describe_image(image_data) if image_data else ""
         intent = parsed_intent or self.llm.understand(" ".join(filter(None, [query, vision_text])))
@@ -157,11 +158,25 @@ class CommerceService:
         recommendation = self.recommender.recommend(user_id, self.settings.candidate_k) if user_id else []
         multimodal = self.multimodal.search(query_text, image_data, self.settings.candidate_k)
         candidates = self._merge(retrieval, recommendation, multimodal)
+        product_target = query_product_target(query_text) if match_product_type else None
+        product_match_trace = []
+        if product_target:
+            before = len(candidates)
+            candidates = [candidate for candidate in candidates
+                          if matches_product_target(product_target, candidate.product.title, candidate.product.description)]
+            product_match_trace.append({
+                "stage": "product_match", "provider": "keyboard-product-head-rules",
+                "target": product_target, "candidates_before": before,
+                "candidates": len(candidates), "excluded": before - len(candidates),
+            })
         recall_ms = (perf_counter() - stage) * 1000
 
         stage = perf_counter()
         self._apply_reranker(candidates, query_text)
         items = self.ranker.rank(candidates, intent, self.llm, include_ads, top_k, query_text)
+        if product_target:
+            for item in items:
+                item.reason = TARGET_LABELS[product_target] + "；" + item.reason
         rank_ms = (perf_counter() - stage) * 1000
         gorse_error = getattr(self.recommender, "last_error", None)
         llm_error = getattr(self.llm, "last_error", None)
@@ -175,6 +190,7 @@ class CommerceService:
              "candidates": len(recommendation), "fallback": gorse_error},
             {"stage": "multimodal", "provider": self.multimodal.provider_name,
              "candidates": len(multimodal)},
+            *product_match_trace,
             {"stage": "rank", "provider": self.health()["providers"]["ranking"],
              "candidates": len(candidates), "returned": len(items), "latency_ms": round(rank_ms, 2)},
             {"stage": "latency", "recall_ms": round(recall_ms, 2),
@@ -184,7 +200,7 @@ class CommerceService:
     def recommend(self, user_id: str, top_k: int = 10, include_ads: bool = True) -> ResultSet:
         history = self.data.history(user_id)
         query = "推荐 " + " ".join(product.category + " " + product.title for product in history[-5:])
-        result = self.search(query, user_id, top_k, include_ads)
+        result = self.search(query, user_id, top_k, include_ads, match_product_type=False)
         result.intent["intent"] = "recommend"
         result.trace.insert(0, {"stage": "history", "items": [p.item_id for p in history]})
         return result

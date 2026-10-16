@@ -214,7 +214,7 @@ uvicorn commerce_ai.api:app --port 8008
 ## 当前验证
 
 ```text
-20 tests passed
+46 tests passed
 sample NDCG@10: 1.0000
 sample Recall@10: 1.0000
 sample MRR@10: 1.0000

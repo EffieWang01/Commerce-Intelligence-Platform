@@ -51,6 +51,15 @@ def main() -> None:
             report[query] = {"item_ids": ids, "titles": [item["title"] for item in result["items"]],
                              "trace": result["trace"]}
         assert len(set(tops)) == len(queries), "Different query categories returned identical results"
+        keyboard_ids = report["mechanical keyboard"]["item_ids"]
+        assert "ar23_B07BRX2XMV" in keyboard_ids, "Known keyboard body missing from top results"
+        assert not {"ar23_B0BKCFNSTK", "ar23_B06VWDBM2M"} & set(keyboard_ids)
+        for query, expected_id in [("mechanical keyboard keycaps", "ar23_B06VWDBM2M"),
+                                   ("keyboard cable", "ar23_B0BKCFNSTK")]:
+            response = client.post("/v1/search", json={"query": query, "top_k": 3, "include_ads": False})
+            response.raise_for_status()
+            assert response.json()["items"][0]["item_id"] == expected_id
+        report["keyboard_body_and_accessory_regression"] = True
         response = client.post("/v1/search", json={"query": "xyz987-unseen-catalog-query"})
         response.raise_for_status()
         assert not response.json()["items"], "Unmatched query unexpectedly returned default results"
