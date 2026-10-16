@@ -4,6 +4,7 @@ from commerce_ai.agent import CommerceAgent
 from commerce_ai.config import Settings
 from commerce_ai.data import read_jsonl
 from commerce_ai.evaluation import evaluate_queries, ndcg_at_k, recall_at_k
+from commerce_ai.ranking import MultiObjectiveRanker
 from commerce_ai.service import CommerceService
 
 
@@ -66,4 +67,33 @@ def test_offline_evaluation_contract():
     assert report.p95_latency_ms >= 0
     assert ndcg_at_k(["a", "b"], {"a"}, 2) == 1
     assert recall_at_k(["a", "b"], {"a", "c"}, 2) == .5
+
+
+def test_agent_compares_real_catalog_ids_and_deduplicates_mentions():
+    service = CommerceService(settings())
+    for old_id, new_id in [("p001", "ar23_B000000001"), ("p002", "ar23_B000000002")]:
+        service.data.products_by_id[new_id] = service.data.products_by_id[old_id].model_copy(
+            update={"item_id": new_id}
+        )
+    result = CommerceAgent(service).run("对比 ar23_B000000001、ar23_B000000001 和 ar23_B000000002")
+    assert [item["item_id"] for item in result["items"]] == ["ar23_B000000001", "ar23_B000000002"]
+    assert result["trace"][1]["action"] == "compare_products"
+
+
+def test_optional_learning_ranker_scores_candidates_in_one_batch():
+    class FakeModel:
+        def __init__(self):
+            self.batch_size = 0
+
+        def predict(self, features):
+            self.batch_size = len(features)
+            return list(range(self.batch_size))
+
+    service = CommerceService(settings())
+    model = FakeModel()
+    service.ranker = MultiObjectiveRanker(model)
+    result = service.search("降噪耳机", top_k=5, include_ads=False)
+    assert result.items
+    assert model.batch_size >= len(result.items)
+    assert service.health()["providers"]["ranking"] == "lightgbm-lambdarank"
 

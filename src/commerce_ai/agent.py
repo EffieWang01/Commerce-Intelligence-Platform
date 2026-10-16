@@ -4,7 +4,7 @@ from .schemas import ResultSet
 from .service import CommerceService
 
 
-ITEM_ID = re.compile(r"\b(?:p\d{3})\b", re.I)
+ITEM_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]*")
 
 
 class CommerceAgent:
@@ -16,7 +16,8 @@ class CommerceAgent:
     def run(self, message: str, user_id: str | None = None, image_data: str | None = None) -> dict:
         intent = self.service.llm.understand(message)
         trace = [{"step": 1, "action": "understand", "output": intent}]
-        ids = ITEM_ID.findall(message)
+        ids = list(dict.fromkeys(item_id for item_id in ITEM_ID.findall(message)
+                                 if item_id in self.service.data.products_by_id))
         if intent["intent"] == "compare" and len(ids) >= 2:
             output = self.service.compare(ids[:4])
             trace.append({"step": 2, "action": "compare_products", "args": ids[:4]})

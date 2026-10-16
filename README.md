@@ -12,6 +12,7 @@ CTR/CVR/价值目标；LLM 负责结构化意图、Query 改写和有依据的�
 - 广告：Sponsored 候选、CTR × CVR × value 信号和有机相关性约束。
 - LLM：本地规则实现用于联调；服务器通过 OpenAI 兼容协议接国产 VLM 或本地 vLLM。
 - 多模态：Chinese-CLIP 文搜图/图搜图，Qwen-VL 提取视觉属性。
+- 排序：规则排序基线；提供可选 LightGBM LambdaMART 学习排序训练与线上加载。
 - RAG：推荐理由只能使用商品元数据和排序信号。
 - Agent：搜索、个性化推荐、商品比较三个受限工具，返回完整 trace。
 - 评测：NDCG@10、Recall@10、空结果率，以及 API 和 Agent 回归测试。
@@ -46,16 +47,26 @@ CTR/CVR/价值目标；LLM 负责结构化意图、Query 改写和有依据的�
 Windows PowerShell：
 
 ```powershell
-cd commerce_searchrec_agent
+cd Commerce-Intelligence-Platform
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install -e ".[test]"
+python -m pip install -e ".[ranking,test]"
 pytest -q
 python -m commerce_ai.cli smoke --query "预算 500 的降噪耳机"
 python -m commerce_ai.cli evaluate
 ```
 
-分别启动 API 和 Demo：
+已有训练模型时，一键启动 API 和 Demo：
+
+```powershell
+.\scripts\run_local.ps1
+```
+
+启动器在模型文件存在时加载 LambdaMART，并在启动后确认实际排序器。端口被占用时选择空闲端口，
+实际地址及进程 PID 写入 `artifacts/runtime/local-services.json`，日志也集中在该目录内。
+使用 `-Ranker Rules` 启动规则基线，使用 `-Ranker LambdaMART` 要求必须加载训练模型。
+
+也可以分别启动（不设置模型路径时使用规则基线）：
 
 ```powershell
 uvicorn commerce_ai.api:app --port 8008
@@ -157,6 +168,41 @@ python verify_transfer.py .
 
 不要同时训练所有模型。每一阶段产生独立、可复现的指标表后再进入下一阶段。
 
+### 学习排序器
+
+`scripts/import_esci_labels.py` 可以按 ASIN 对齐当前商品目录与 Amazon 官方 ESCI 标注，但当前交集只有
+405 条判断、6 个可用 query，不足以训练。因此训练使用单独抽样的官方 ESCI 商品文本与标注；现有完整
+5 万商品目录保留。
+
+首轮真实训练已完成：2,898 个训练 query、54,336 对标注，独立测试集 NDCG@10 从规则基线的 0.7013
+提升到 0.7237。评估范围、数据限制和产物位置见
+[docs/RANKING_BASELINE_RESULTS_ZH.md](docs/RANKING_BASELINE_RESULTS_ZH.md)。
+
+训练标签每行一个 query-item 判断：
+
+```json
+{"query":"wireless headphones","item_id":"真实商品ID","relevance":3,"split":"train"}
+{"query":"wireless headphones","item_id":"另一个真实商品ID","relevance":0,"split":"train"}
+```
+
+`relevance` 为 I=0、C=1、S=2、E=3，NDCG gain 分别为 0、0.01、0.1、1。训练、验证和测试按 query
+隔离，训练脚本会拒绝跨 split 的重复 query。验证集用于早停，test 只在模型拟合结束后评估：
+
+```powershell
+python scripts/import_esci_labels.py --data-dir data/demo
+python scripts/download_esci_products.py
+python scripts/prepare_esci_training.py
+python scripts/train_lambdamart.py --data-dir data/processed/esci_text --labels data/processed/esci_text/labels.jsonl
+$env:COMMERCE_RANKING_MODEL_PATH = "artifacts/lambdamart/model.txt"
+uvicorn commerce_ai.api:app --port 8008
+```
+
+只需安装轻量依赖 `.[ranking]`；无需安装 GPU 训练全家桶。服务器目录布局与复现命令见
+[docs/SERVER44_TRAINING.md](docs/SERVER44_TRAINING.md)。未配置模型路径时使用规则基线；模型无法加载时也降级到规则排序，并在
+`/health` 的 warnings 中说明。查询价格与类目约束仍作为排序前硬过滤。API trace 会报告实际排序器。切勿用
+`data/ecommmmu/relevance_sample.jsonl` 当前的 test 样本训练或据此声称排序效果。ESCI 测评仅覆盖抽样的
+已标注候选，不代表完整官方榜单或全库召回效果；当前训练使用文本与结构化字段，尚未使用图像特征。
+
 ## 亮点
 
 - 同一个 Item 表示服务搜索、推荐和广告，减少重复系统。
@@ -168,7 +214,7 @@ python verify_transfer.py .
 ## 当前验证
 
 ```text
-15 tests passed
+20 tests passed
 sample NDCG@10: 1.0000
 sample Recall@10: 1.0000
 sample MRR@10: 1.0000

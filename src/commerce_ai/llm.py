@@ -91,7 +91,7 @@ class HeuristicLLM:
         price = f"价格 {product.price:.0f}" if product.price is not None else "价格未知"
         evidence = [product.category, price]
         if signals.get("retrieval", 0) > .4:
-            evidence.append("与查询语义匹配")
+            evidence.append("与查询文本匹配")
         if signals.get("multimodal", 0) > .4:
             evidence.append("外观与图片需求相近")
         if signals.get("recommendation", 0) > .4:

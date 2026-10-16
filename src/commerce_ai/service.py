@@ -4,7 +4,7 @@ from .config import Settings
 from .data import CommerceData
 from .llm import HeuristicLLM, OpenAICompatibleLLM, ResilientLLM, TransformersLLM
 from .multimodal import ChineseClipMultimodalRetriever, DisabledMultimodalRetriever
-from .ranking import Candidate, MultiObjectiveRanker
+from .ranking import Candidate, MultiObjectiveRanker, load_ranking_model
 from .recommendation import GorseRecommender, ItemCF
 from .reranking import CrossEncoderReranker, NoopReranker
 from .retrieval import HybridRetriever, QdrantHybridRetriever, SentenceTransformerEncoder
@@ -22,7 +22,14 @@ class CommerceService:
         self.recommender = self._build_recommender()
         self.reranker = self._build_reranker()
         self.multimodal = self._build_multimodal()
-        self.ranker = MultiObjectiveRanker()
+        ranking_model = None
+        if settings.ranking_model_path:
+            try:
+                ranking_model = load_ranking_model(settings.ranking_model_path)
+            except Exception as exc:
+                ranking_model = None
+                self._fallback("learning_ranker", exc)
+        self.ranker = MultiObjectiveRanker(ranking_model)
 
     def _fallback(self, component: str, exc: Exception) -> None:
         self.init_warnings.append(f"{component}:{type(exc).__name__}")
@@ -107,6 +114,7 @@ class CommerceService:
                 "recommendation": self.recommender.provider_name,
                 "reranker": self.reranker.provider_name,
                 "multimodal": self.multimodal.provider_name,
+                "ranking": "lightgbm-lambdarank" if self.ranker.model is not None else "weighted-rules",
             },
             "warnings": self.init_warnings,
             "catalog": {
@@ -153,7 +161,7 @@ class CommerceService:
 
         stage = perf_counter()
         self._apply_reranker(candidates, query_text)
-        items = self.ranker.rank(candidates, intent, self.llm, include_ads, top_k)
+        items = self.ranker.rank(candidates, intent, self.llm, include_ads, top_k, query_text)
         rank_ms = (perf_counter() - stage) * 1000
         gorse_error = getattr(self.recommender, "last_error", None)
         llm_error = getattr(self.llm, "last_error", None)
@@ -167,7 +175,7 @@ class CommerceService:
              "candidates": len(recommendation), "fallback": gorse_error},
             {"stage": "multimodal", "provider": self.multimodal.provider_name,
              "candidates": len(multimodal)},
-            {"stage": "rank", "provider": self.reranker.provider_name,
+            {"stage": "rank", "provider": self.health()["providers"]["ranking"],
              "candidates": len(candidates), "returned": len(items), "latency_ms": round(rank_ms, 2)},
             {"stage": "latency", "recall_ms": round(recall_ms, 2),
              "total_ms": round((perf_counter() - started) * 1000, 2)},

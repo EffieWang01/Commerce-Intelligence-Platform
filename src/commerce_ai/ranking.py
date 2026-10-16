@@ -1,6 +1,8 @@
 from dataclasses import dataclass
+from pathlib import Path
 
 from .schemas import Product, RankedItem
+from .retrieval import tokenize
 
 
 @dataclass
@@ -12,12 +14,55 @@ class Candidate:
     rerank: float = 0.0
 
 
+FEATURE_NAMES = [
+    "all_coverage", "title_coverage", "description_coverage", "category_coverage",
+    "attribute_coverage", "brand_coverage", "title_length", "description_length",
+    "has_price", "price_scaled", "title_phrase_match", "query_terms",
+]
+
+
+def load_ranking_model(path: Path):
+    from lightgbm import Booster
+
+    # Python handles Unicode paths that the native Windows file API may reject.
+    model = Booster(model_str=path.read_text(encoding="utf-8"))
+    if model.feature_name() != FEATURE_NAMES:
+        raise ValueError("Ranking model feature schema does not match this service")
+    return model
+
+
+def ranking_features(query: str, product: Product) -> list[float]:
+    query_terms = set(tokenize(query))
+    fields = [set(tokenize(text)) for text in (
+        product.title, product.description, product.category,
+        " ".join(product.attributes), product.brand or "",
+    )]
+    term_count = max(1, len(query_terms))
+    return [
+        len(query_terms & set.union(*fields)) / term_count,
+        *(len(query_terms & field) / term_count for field in fields),
+        min(len(product.title), 500) / 500,
+        min(len(product.description), 4000) / 4000,
+        float(product.price is not None),
+        min(product.price or 0.0, 10000.0) / 10000,
+        float(bool(query.strip()) and query.strip().casefold() in product.title.casefold()),
+        min(len(query_terms), 100) / 100,
+    ]
+
+
 class MultiObjectiveRanker:
     """Transparent local baseline; replace with LambdaRank/ESMM in server profile."""
 
-    def rank(self, candidates: list[Candidate], intent: dict, explainer, include_ads: bool, top_k: int) -> list[RankedItem]:
+    def __init__(self, model=None):
+        self.model = model
+
+    def rank(self, candidates: list[Candidate], intent: dict, explainer, include_ads: bool,
+             top_k: int, query: str = "") -> list[RankedItem]:
         ranked = []
         contexts = {}
+        model_features = []
+        model_offsets = []
+        ad_bonuses = []
         for candidate in candidates:
             product = candidate.product
             has_price_constraint = intent.get("max_price") is not None or intent.get("min_price") is not None
@@ -61,7 +106,13 @@ class MultiObjectiveRanker:
             )
             ad_eligible = category_match > 0 or candidate.retrieval >= .15 or candidate.recommendation >= .4
             sponsored_bonus = min(.08, ad_score) if include_ads and ad_eligible else 0.0
-            score = relevance + sponsored_bonus
+            if self.model is not None:
+                score = sponsored_bonus
+                model_offsets.append(len(ranked))
+                model_features.append(ranking_features(query, product))
+                ad_bonuses.append(sponsored_bonus)
+            else:
+                score = relevance + sponsored_bonus
             signals = {
                 "retrieval": candidate.retrieval,
                 "recommendation": candidate.recommendation,
@@ -82,6 +133,10 @@ class MultiObjectiveRanker:
             )
             ranked.append(item)
             contexts[item.item_id] = (product, signals)
+        if self.model is not None and model_features:
+            predictions = self.model.predict(model_features)
+            for offset, prediction, bonus in zip(model_offsets, predictions, ad_bonuses):
+                ranked[offset].score = round(float(prediction) + bonus, 6)
         selected = sorted(ranked, key=lambda item: (-item.score, item.item_id))[:top_k]
         rows = [contexts[item.item_id] for item in selected]
         if hasattr(explainer, "explain_many"):

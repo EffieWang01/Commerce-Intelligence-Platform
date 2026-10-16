@@ -22,6 +22,7 @@ class Settings:
     llm_base_url: str = ""
     llm_api_key: str = ""
     reranker_backend: str = "weighted"
+    ranking_model_path: Path | None = None
     vector_backend: str = "memory"
     qdrant_url: str = "http://127.0.0.1:6333"
     qdrant_api_key: str = ""
@@ -69,6 +70,8 @@ class Settings:
             llm_base_url=os.getenv("COMMERCE_LLM_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
             llm_api_key=os.getenv("COMMERCE_LLM_API_KEY", ""),
             reranker_backend=os.getenv("COMMERCE_RERANKER_BACKEND", "cross-encoder" if profile == "server" else "weighted"),
+            ranking_model_path=(Path(os.environ["COMMERCE_RANKING_MODEL_PATH"])
+                                if os.getenv("COMMERCE_RANKING_MODEL_PATH") else None),
             vector_backend=os.getenv("COMMERCE_VECTOR_BACKEND", "qdrant" if profile == "server" else "memory"),
             qdrant_url=os.getenv("COMMERCE_QDRANT_URL", "http://127.0.0.1:6333"),
             qdrant_api_key=os.getenv("COMMERCE_QDRANT_API_KEY", ""),
